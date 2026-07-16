@@ -131,25 +131,43 @@ The code handles on-page SEO. To actually rank, also do this:
 2. **Create & verify a Google Business Profile** for your Pittsburgh business —
    this is the biggest driver of local/map rankings. Match the name, address,
    and phone (NAP) to `src/lib/site.ts`.
-3. **Submit `sitemap.xml`** in Google Search Console (`/sitemap.xml`).
-4. **Gather real reviews** on Google — swap the sample testimonials for verified
+3. **Verify in Google Search Console** ([search.google.com/search-console](https://search.google.com/search-console)):
+   use the "HTML tag" method, paste the token into the `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`
+   env var, redeploy, click Verify, then **submit your sitemap** (`/sitemap.xml`).
+4. **Turn on analytics (optional):** set `NEXT_PUBLIC_GA_ID` (a GA4 `G-XXXXXXXXXX`
+   ID) to track traffic and conversions.
+5. **Gather real reviews** on Google — swap the sample testimonials for verified
    ones and update the `aggregateRating` in `src/components/JsonLd.tsx` to match
    reality (never fake review counts).
-5. **Build local citations & backlinks** (Yelp, chambers of commerce, local
+6. **Build local citations & backlinks** (Yelp, chambers of commerce, local
    press, partner carriers).
-6. **Publish local content** — add pages/blog posts targeting neighborhoods and
+7. **Publish local content** — add pages/blog posts targeting neighborhoods and
    specific questions ("cheap SR-22 in Pittsburgh," etc.).
 
 ---
 
-## 🚢 Deploy
+## 🚢 Deploy & connect the domain (`pittsburghinsurancehub.com`)
 
-The easiest path is **Vercel** (creators of Next.js):
+Hosted on **Vercel**. To connect the Namecheap domain:
 
-1. Push this repo to GitHub.
-2. Import it at [vercel.com/new](https://vercel.com/new).
-3. Add your environment variables.
-4. Point your custom domain (e.g. `pittsburghinsurancehub.com`).
+1. In **Vercel → your project → Settings → Domains**, add both:
+   - `pittsburghinsurancehub.com`
+   - `www.pittsburghinsurancehub.com`
+   Set **`www` as primary** (Vercel redirects the apex to it). This matches the
+   canonical URL in `src/lib/site.ts`.
+2. Vercel shows the DNS records to add. In **Namecheap → Domain List → Manage →
+   Advanced DNS**, add them (remove Namecheap's default "parking" records first):
+   - **CNAME** · Host `www` · Value `cname.vercel-dns.com`
+   - **A** · Host `@` · Value `76.76.21.21` (or the ALIAS/A record Vercel shows)
+   DNS can take anywhere from a few minutes to a couple of hours to propagate.
+3. Once the domain shows "Valid Configuration" in Vercel, set the env var
+   `NEXT_PUBLIC_SITE_URL=https://www.pittsburghinsurancehub.com` and **redeploy**.
+
+### Make the site publicly shareable (no Vercel login wall)
+Branch/preview URLs (with `-git-main-` in them) are protected by default — share
+the clean **production** domain instead. If any public URL still asks for a Vercel
+login, go to **Settings → Deployment Protection** and set **Vercel Authentication**
+to **"Only Preview Deployments"** (or Disabled).
 
 Works on any Node host that supports Next.js 15 (Netlify, Render, Fly, a VPS via
 `npm run build && npm run start`, etc.).
