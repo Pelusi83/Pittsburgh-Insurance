@@ -77,6 +77,12 @@ export function Header() {
           >
             How It Works
           </Link>
+          <Link
+            href="/locations"
+            className="text-base font-semibold text-slate-700 hover:text-brand-700"
+          >
+            Areas
+          </Link>
           <a href={telHref} className="btn-ghost">
             📞 Call
           </a>
@@ -130,6 +136,13 @@ export function Header() {
               className="rounded-xl px-3 py-3 text-lg text-slate-800 hover:bg-brand-50"
             >
               How It Works
+            </Link>
+            <Link
+              href="/locations"
+              onClick={() => setOpen(false)}
+              className="rounded-xl px-3 py-3 text-lg text-slate-800 hover:bg-brand-50"
+            >
+              Service Areas
             </Link>
             <a href={telHref} className="btn-ghost mt-2">
               📞 Call {siteConfig.phone}

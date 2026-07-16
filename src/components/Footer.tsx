@@ -64,6 +64,14 @@ export function Footer() {
             </li>
             <li>
               <Link
+                href="/locations"
+                className="text-slate-700 hover:text-brand-700"
+              >
+                Service Areas
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/quote"
                 className="text-slate-700 hover:text-brand-700"
               >
