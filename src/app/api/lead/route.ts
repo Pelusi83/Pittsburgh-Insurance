@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 // Bump this when the lead pipeline changes so the /api/lead diagnostic can
 // confirm which version is actually live in production.
-const BUILD_VERSION = "2026-07-16.2-leads-to-owner-inbox";
+const BUILD_VERSION = "2026-07-16.3-streaming-ai-chat-capture";
 
 type LeadPayload = {
   insuranceType?: string;
@@ -22,9 +22,12 @@ type LeadPayload = {
   bestTime?: string;
   details?: string;
   consent?: boolean;
+  source?: string;
   // honeypot — should be empty for real humans
   company?: string;
 };
+
+const KNOWN_SOURCES = new Set(["website_quote_form", "website_chat"]);
 
 const validSlugs = new Set(insuranceTypes.map((t) => t.slug));
 
@@ -89,7 +92,9 @@ export async function POST(req: NextRequest) {
     qualifier: (body.qualifier || "").trim().slice(0, 80),
     bestTime: (body.bestTime || "").trim(),
     details: (body.details || "").trim().slice(0, 2000),
-    source: "website_quote_form",
+    source: KNOWN_SOURCES.has(body.source || "")
+      ? (body.source as string)
+      : "website_quote_form",
     userAgent: req.headers.get("user-agent") || "",
   };
 
@@ -120,9 +125,13 @@ export async function GET() {
     service: "lead-capture",
     buildVersion: BUILD_VERSION,
     resendConfigured: Boolean(process.env.RESEND_API_KEY),
+    aiConciergeConfigured: Boolean(process.env.OPENAI_API_KEY),
+    aiModel: process.env.OPENAI_API_KEY
+      ? process.env.OPENAI_MODEL || "gpt-4o-mini"
+      : "built-in engine (no OPENAI_API_KEY)",
     leadsInbox: maskedInbox,
     fromAddress: process.env.LEADS_FROM_EMAIL || "onboarding@resend.dev",
-    note: "If resendConfigured is false on your live site, add RESEND_API_KEY in Vercel and REDEPLOY. If leadsInbox is not your address, set LEADS_NOTIFY_EMAIL.",
+    note: "resendConfigured must be true to email leads. aiConciergeConfigured true means full-AI Sam is on. If either is false on your live site, set the key in Vercel and REDEPLOY.",
   });
 }
 
@@ -223,6 +232,7 @@ function formatLeadEmail(lead: Record<string, unknown>) {
     `Detail:      ${lead.qualifier || "(not provided)"}`,
     `Best time:   ${lead.bestTime || "(any)"}`,
     `Notes:       ${lead.details || "(none)"}`,
+    `Source:      ${lead.source === "website_chat" ? "Live chat (Sam)" : "Quote form"}`,
     "",
     `Received:    ${lead.receivedAt}`,
     `Lead ID:     ${lead.id}`,

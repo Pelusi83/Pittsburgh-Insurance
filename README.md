@@ -22,9 +22,12 @@ Built with **Next.js 15 (App Router)**, **React 19**, **TypeScript**, and
   validation, spam honeypot, and an API (`/api/lead`) that emails leads (via
   Resend) or saves them locally so you never lose one.
 - **AI "live agent" concierge** — a chat widget ("Sam") that answers insurance
-  questions like a knowledgeable local agent. Works out of the box with a
-  built-in Pittsburgh insurance knowledge base, and gets even smarter when you
-  add an LLM key.
+  questions like a knowledgeable local agent, with **real-time streaming replies**
+  (it types like a person), conversation memory across pages, a proactive
+  greeting, and **in-chat lead capture** (name/phone/ZIP/type → straight to your
+  inbox, tagged as a chat lead). Works out of the box with a built-in Pittsburgh
+  insurance knowledge base, and becomes dramatically smarter when you add an
+  OpenAI key (see "Turn on full-AI Sam" below).
 - **Aggressive local SEO** — per-line landing pages (`/insurance/[slug]`),
   `LocalBusiness`/`InsuranceAgency` + `FAQ` + `Service` structured data
   (JSON-LD), auto-generated `sitemap.xml` and `robots.txt`, rich metadata, and
@@ -92,6 +95,31 @@ SEO landing page (headline, benefits, coverage, FAQs, keywords).
 
 Add/adjust Q&A topics. This both powers the offline concierge and grounds the
 LLM so answers stay accurate and Pittsburgh-specific.
+
+---
+
+## 🤖 Turn on full-AI Sam (recommended)
+
+Sam works without any key (built-in engine), but the "smart as an insurance book,
+feels like a live agent" experience comes from connecting a real model. It's one
+environment variable:
+
+1. Create an account at **[platform.openai.com](https://platform.openai.com)** and
+   add a little billing credit.
+2. Go to **API keys** and create a new secret key (starts with `sk-...`).
+3. In **Vercel → your project → Settings → Environment Variables**, add:
+   - `OPENAI_API_KEY` = your key (scope: **Production**)
+   - *(optional)* `OPENAI_MODEL` = `gpt-4o-mini` (default; cheap and fast)
+4. **Redeploy.** That's it — Sam now streams live, human-like, deeply
+   knowledgeable answers, grounded on the Pittsburgh knowledge base.
+
+**Cost:** with `gpt-4o-mini`, a typical chat costs a fraction of a cent — even
+hundreds of conversations a month is usually just a few dollars. Set a monthly
+usage limit in your OpenAI account to stay in control.
+
+> No key? Sam still runs on the upgraded built-in engine: context-aware,
+> non-repeating, and it still captures leads. The OpenAI key simply makes it
+> shine.
 
 ---
 
