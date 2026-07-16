@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { generateReply, knowledgeContext } from "@/lib/knowledge";
 import { siteConfig } from "@/lib/site";
 
@@ -7,14 +7,21 @@ export const runtime = "nodejs";
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
 const MAX_MESSAGE_LEN = 1500;
-const MAX_HISTORY = 12;
+const MAX_HISTORY = 14;
+const encoder = new TextEncoder();
+
+const STREAM_HEADERS = {
+  "Content-Type": "text/plain; charset=utf-8",
+  "Cache-Control": "no-store, no-transform",
+  "X-Accel-Buffering": "no",
+};
 
 export async function POST(req: NextRequest) {
   let body: { messages?: ChatMessage[] };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Invalid request." }, { status: 400 });
+    return new Response("Invalid request.", { status: 400 });
   }
 
   const messages = (body.messages || [])
@@ -27,85 +34,122 @@ export async function POST(req: NextRequest) {
     .slice(-MAX_HISTORY)
     .map((m) => ({ ...m, content: m.content.slice(0, MAX_MESSAGE_LEN) }));
 
-  const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  const userText = lastUser?.content?.trim() || "";
-
-  if (!userText) {
-    return NextResponse.json({
-      reply:
-        "I'm here and happy to help! What kind of insurance are you thinking about — home, auto, life, health, disability, Medicare, renters or business?",
-      assisted: true,
-    });
+  const hasUser = messages.some((m) => m.role === "user" && m.content.trim());
+  if (!hasUser) {
+    return simulatedStream(
+      "I'm here and happy to help! What kind of insurance are you thinking about — auto, home, life, health, Medicare, disability, renters or business?"
+    );
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
 
-  // --- Path 1: Grounded LLM (when a key is configured) --------------------
+  // --- Path 1: Live, streaming LLM (when a key is configured) --------------
   if (apiKey) {
     try {
-      const reply = await askLLM(messages, apiKey);
-      if (reply) {
-        return NextResponse.json({ reply, assisted: true });
-      }
+      return await streamLLM(messages, apiKey);
     } catch (err) {
-      console.error("LLM chat failed, falling back to knowledge base:", err);
+      console.error("LLM stream failed, falling back to built-in engine:", err);
     }
   }
 
-  // --- Path 2: Built-in conversational engine (always available) ----------
+  // --- Path 2: Built-in conversational engine (simulated streaming) --------
   const reply = generateReply(messages, siteConfig.phone);
-  return NextResponse.json({ reply, assisted: true });
+  return simulatedStream(reply);
 }
 
-async function askLLM(
+/** Proxy the OpenAI streaming response, forwarding only the text deltas. */
+async function streamLLM(
   messages: ChatMessage[],
   apiKey: string
-): Promise<string | null> {
+): Promise<Response> {
   const baseUrl = (
     process.env.OPENAI_BASE_URL || "https://api.openai.com/v1"
   ).replace(/\/$/, "");
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-  const systemPrompt = buildSystemPrompt();
+  const upstream = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      stream: true,
+      temperature: 0.7,
+      max_tokens: 500,
+      presence_penalty: 0.6,
+      frequency_penalty: 0.5,
+      messages: [
+        { role: "system", content: buildSystemPrompt() },
+        ...messages,
+      ],
+    }),
+  });
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-
-  try {
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        temperature: 0.7,
-        max_tokens: 450,
-        presence_penalty: 0.6,
-        frequency_penalty: 0.5,
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
-      }),
-    });
-
-    if (!res.ok) {
-      console.error("LLM API error:", res.status, await res.text());
-      return null;
-    }
-
-    const data = await res.json();
-    const reply: string | undefined = data?.choices?.[0]?.message?.content;
-    return reply?.trim() || null;
-  } finally {
-    clearTimeout(timeout);
+  if (!upstream.ok || !upstream.body) {
+    const detail = await upstream.text().catch(() => "");
+    throw new Error(`LLM ${upstream.status}: ${detail}`);
   }
+
+  const reader = upstream.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  const stream = new ReadableStream({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+        const data = trimmed.slice(5).trim();
+        if (data === "[DONE]") {
+          controller.close();
+          return;
+        }
+        try {
+          const json = JSON.parse(data);
+          const delta: string | undefined = json?.choices?.[0]?.delta?.content;
+          if (delta) controller.enqueue(encoder.encode(delta));
+        } catch {
+          // ignore keep-alive / partial lines
+        }
+      }
+    },
+    cancel() {
+      reader.cancel().catch(() => {});
+    },
+  });
+
+  return new Response(stream, { headers: STREAM_HEADERS });
+}
+
+/** Stream a precomputed reply word-by-word so the offline engine still feels live. */
+function simulatedStream(reply: string): Response {
+  const tokens = reply.match(/\S+\s*/g) || [reply];
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const token of tokens) {
+        controller.enqueue(encoder.encode(token));
+        await new Promise((r) => setTimeout(r, 28));
+      }
+      controller.close();
+    },
+  });
+  return new Response(stream, { headers: STREAM_HEADERS });
 }
 
 function buildSystemPrompt() {
   return `You are ${siteConfig.concierge.name}, a sharp, warm, genuinely knowledgeable ${siteConfig.city} insurance concierge for ${siteConfig.name} — think of the best local independent agent someone's ever talked to. You're conversational, reassuring, and quick, and you clearly know insurance cold.
 
-HOW TO SOUND (this is critical — the visitor found the current experience repetitive and shallow):
+HOW TO SOUND (this is critical — the visitor found earlier experiences repetitive and shallow):
 - Be genuinely INSIGHTFUL. Don't just define terms — give the practical "here's what actually matters / here's the mistake people make / here's the local angle" perspective a seasoned agent would.
 - Be INTERACTIVE. Read the whole conversation. Build on what they already told you. Ask ONE natural, relevant follow-up at a time — never interrogate.
 - NEVER repeat a question you (or the visitor) already covered, and never send a reply that's essentially the same as a previous one. If they rephrase, go deeper or take a new angle instead of repeating.
@@ -115,7 +159,7 @@ HOW TO SOUND (this is critical — the visitor found the current experience repe
 YOUR JOB:
 1. Actually help — answer accurately and add insight.
 2. Build trust; be honest, never pushy or salesy.
-3. When it fits naturally, guide them to a free, no-obligation quote: tell them to tap the "Get My Free Quote" button at the top, or offer to have a licensed agent follow up if they share their name, phone, and ZIP. Prioritize getting their ZIP + best contact number once they're interested, so the lead can be routed locally.
+3. When it fits naturally, guide them to a free, no-obligation quote: tell them to tap the "Get a free quote" button in the chat, or offer to have a licensed agent follow up if they share their name, phone, and ZIP. Prioritize getting their ZIP + best contact number once they're interested, so the lead can be routed locally.
 
 HARD RULES:
 - Do NOT describe yourself as "an AI", "a language model", "a bot", or "an assistant". If asked directly if you're a real person, be gracious and honest: you're the ${siteConfig.name} concierge, responses may be assisted, and you can connect them to a licensed human agent right away (phone ${siteConfig.phone}).

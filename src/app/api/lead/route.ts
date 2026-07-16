@@ -22,9 +22,12 @@ type LeadPayload = {
   bestTime?: string;
   details?: string;
   consent?: boolean;
+  source?: string;
   // honeypot — should be empty for real humans
   company?: string;
 };
+
+const KNOWN_SOURCES = new Set(["website_quote_form", "website_chat"]);
 
 const validSlugs = new Set(insuranceTypes.map((t) => t.slug));
 
@@ -89,7 +92,9 @@ export async function POST(req: NextRequest) {
     qualifier: (body.qualifier || "").trim().slice(0, 80),
     bestTime: (body.bestTime || "").trim(),
     details: (body.details || "").trim().slice(0, 2000),
-    source: "website_quote_form",
+    source: KNOWN_SOURCES.has(body.source || "")
+      ? (body.source as string)
+      : "website_quote_form",
     userAgent: req.headers.get("user-agent") || "",
   };
 
@@ -223,6 +228,7 @@ function formatLeadEmail(lead: Record<string, unknown>) {
     `Detail:      ${lead.qualifier || "(not provided)"}`,
     `Best time:   ${lead.bestTime || "(any)"}`,
     `Notes:       ${lead.details || "(none)"}`,
+    `Source:      ${lead.source === "website_chat" ? "Live chat (Sam)" : "Quote form"}`,
     "",
     `Received:    ${lead.receivedAt}`,
     `Lead ID:     ${lead.id}`,
