@@ -91,26 +91,39 @@ export async function POST(req: NextRequest) {
  * Delivers the lead. If a Resend API key is configured, email the business.
  * Otherwise, append to a local JSONL file so nothing is ever lost in dev.
  */
+// PRIVATE lead-notification inbox. Quote submissions are delivered here.
+// Defined server-side only (this API route never ships to the browser), so the
+// address is NEVER exposed on the site or in client JavaScript. Override with
+// the LEADS_NOTIFY_EMAIL environment variable if desired.
+const LEADS_INBOX = process.env.LEADS_NOTIFY_EMAIL || "johnc.pelusi@gmail.com";
+
 async function deliverLead(lead: Record<string, unknown>) {
   const resendKey = process.env.RESEND_API_KEY;
-  const notify = process.env.LEADS_NOTIFY_EMAIL || siteConfig.email;
+  const notify = LEADS_INBOX;
+  // "From" address. Resend's shared sender works with zero domain setup, so
+  // leads can be received immediately after adding just an API key.
+  const from =
+    process.env.LEADS_FROM_EMAIL ||
+    `${siteConfig.name} <onboarding@resend.dev>`;
 
   if (resendKey) {
     try {
-      await fetch("https://api.resend.com/emails", {
+      const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${resendKey}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: `${siteConfig.name} <leads@${new URL(siteConfig.url).hostname}>`,
+          from,
           to: [notify],
+          reply_to: (lead.email as string) || undefined,
           subject: `New ${lead.insuranceName} lead: ${lead.fullName}`,
           text: formatLeadEmail(lead),
         }),
       });
-      return;
+      if (res.ok) return;
+      console.error("Resend responded with error, storing locally:", res.status, await res.text());
     } catch (err) {
       // fall through to local storage on failure
       console.error("Resend delivery failed, storing locally:", err);

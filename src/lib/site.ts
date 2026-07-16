@@ -20,7 +20,14 @@ export const siteConfig = {
   // Owner / licensing — displayed for credibility. Replace with your details.
   licensedAgentName: "Your Name",
   licenseNumber: "PA License #0000000",
-  phone: process.env.NEXT_PUBLIC_BUSINESS_PHONE || "(412) 555-0199",
+  phone: process.env.NEXT_PUBLIC_BUSINESS_PHONE || "(412) 952-4046",
+  // Public-facing email shown on the site. This is NOT where leads are sent —
+  // it's just a generic business inbox visitors can see. Keep it non-personal.
+  //
+  // NOTE: The PRIVATE lead-notification inbox is intentionally defined only in
+  // the server-side API route (src/app/api/lead/route.ts), NOT here, because
+  // this config object is also imported by client components and would ship to
+  // the browser bundle. Keeping it server-only guarantees it is never exposed.
   email:
     process.env.NEXT_PUBLIC_BUSINESS_EMAIL ||
     "quotes@pittsburghinsurancehub.com",
