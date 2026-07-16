@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
+import os from "os";
 import { siteConfig } from "@/lib/site";
 import { insuranceTypes } from "@/lib/insurance";
 
 export const runtime = "nodejs";
+
+// Bump this when the lead pipeline changes so the /api/lead diagnostic can
+// confirm which version is actually live in production.
+const BUILD_VERSION = "2026-07-16.2-leads-to-owner-inbox";
 
 type LeadPayload = {
   insuranceType?: string;
@@ -82,9 +87,37 @@ export async function POST(req: NextRequest) {
     userAgent: req.headers.get("user-agent") || "",
   };
 
-  await deliverLead(lead);
+  const delivery = await deliverLead(lead);
 
-  return NextResponse.json({ ok: true, id: lead.id });
+  return NextResponse.json({
+    ok: true,
+    id: lead.id,
+    emailed: delivery.delivered,
+    deliveryMethod: delivery.method,
+  });
+}
+
+/**
+ * Safe diagnostic endpoint. Visit /api/lead in a browser to confirm your live
+ * deployment has the latest code AND that your Resend key is configured.
+ * It never reveals secrets or the full private inbox address.
+ */
+export async function GET() {
+  const inbox = process.env.LEADS_NOTIFY_EMAIL || "johnc.pelusi@gmail.com";
+  const [user, domain] = inbox.split("@");
+  const maskedInbox = user
+    ? `${user.slice(0, 3)}${"*".repeat(Math.max(1, user.length - 3))}@${domain}`
+    : "(not set)";
+
+  return NextResponse.json({
+    ok: true,
+    service: "lead-capture",
+    buildVersion: BUILD_VERSION,
+    resendConfigured: Boolean(process.env.RESEND_API_KEY),
+    leadsInbox: maskedInbox,
+    fromAddress: process.env.LEADS_FROM_EMAIL || "onboarding@resend.dev",
+    note: "If resendConfigured is false on your live site, add RESEND_API_KEY in Vercel and REDEPLOY. If leadsInbox is not your address, set LEADS_NOTIFY_EMAIL.",
+  });
 }
 
 /**
@@ -97,7 +130,9 @@ export async function POST(req: NextRequest) {
 // the LEADS_NOTIFY_EMAIL environment variable if desired.
 const LEADS_INBOX = process.env.LEADS_NOTIFY_EMAIL || "johnc.pelusi@gmail.com";
 
-async function deliverLead(lead: Record<string, unknown>) {
+type DeliveryResult = { delivered: boolean; method: string; error?: string };
+
+async function deliverLead(lead: Record<string, unknown>): Promise<DeliveryResult> {
   const resendKey = process.env.RESEND_API_KEY;
   const notify = LEADS_INBOX;
   // "From" address. Resend's shared sender works with zero domain setup, so
@@ -122,25 +157,51 @@ async function deliverLead(lead: Record<string, unknown>) {
           text: formatLeadEmail(lead),
         }),
       });
-      if (res.ok) return;
-      console.error("Resend responded with error, storing locally:", res.status, await res.text());
+      if (res.ok) {
+        console.log(`Lead ${lead.id} emailed to ${notify} via Resend.`);
+        return { delivered: true, method: "resend" };
+      }
+      const errText = await res.text();
+      console.error(
+        `Resend error for lead ${lead.id}: ${res.status} ${errText}`
+      );
+      await storeLocally(lead);
+      return { delivered: false, method: "local_fallback", error: `resend_${res.status}` };
     } catch (err) {
-      // fall through to local storage on failure
-      console.error("Resend delivery failed, storing locally:", err);
+      console.error(`Resend request failed for lead ${lead.id}:`, err);
+      await storeLocally(lead);
+      return { delivered: false, method: "local_fallback", error: "resend_exception" };
     }
   }
 
-  try {
-    const dir = path.join(process.cwd(), "data");
-    await fs.mkdir(dir, { recursive: true });
-    await fs.appendFile(
-      path.join(dir, "leads.jsonl"),
-      JSON.stringify(lead) + "\n",
-      "utf8"
-    );
-  } catch (err) {
-    console.error("Failed to persist lead:", err);
+  console.warn(
+    `No RESEND_API_KEY set — lead ${lead.id} stored locally, NOT emailed.`
+  );
+  await storeLocally(lead);
+  return { delivered: false, method: "local_only", error: "no_resend_key" };
+}
+
+// Best-effort local persistence. Uses the OS temp dir, which is writable on
+// serverless platforms (e.g. Vercel), so we never throw and lose the log.
+async function storeLocally(lead: Record<string, unknown>) {
+  const candidates = [
+    path.join(process.cwd(), "data"),
+    path.join(os.tmpdir(), "pgh-insurance-leads"),
+  ];
+  for (const dir of candidates) {
+    try {
+      await fs.mkdir(dir, { recursive: true });
+      await fs.appendFile(
+        path.join(dir, "leads.jsonl"),
+        JSON.stringify(lead) + "\n",
+        "utf8"
+      );
+      return;
+    } catch {
+      // try next candidate
+    }
   }
+  console.error(`Failed to persist lead ${lead.id} to any location.`);
 }
 
 function formatLeadEmail(lead: Record<string, unknown>) {
