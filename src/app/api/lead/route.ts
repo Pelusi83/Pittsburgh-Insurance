@@ -17,6 +17,8 @@ type LeadPayload = {
   email?: string;
   phone?: string;
   zip?: string;
+  currentlyInsured?: string;
+  qualifier?: string;
   bestTime?: string;
   details?: string;
   consent?: boolean;
@@ -56,12 +58,14 @@ export async function POST(req: NextRequest) {
   const fullName = (body.fullName || "").trim();
   const email = (body.email || "").trim();
   const phone = (body.phone || "").trim();
+  const zip = (body.zip || "").trim();
   const insuranceType = (body.insuranceType || "").trim();
 
   if (fullName.length < 2) errors.fullName = "Please enter your name.";
   if (!phone || !isPhone(phone))
     errors.phone = "Please enter a valid phone number.";
   if (email && !isEmail(email)) errors.email = "Please enter a valid email.";
+  if (!/^\d{5}$/.test(zip)) errors.zip = "Please enter a valid 5-digit ZIP code.";
   if (!insuranceType || !validSlugs.has(insuranceType))
     errors.insuranceType = "Please choose an insurance type.";
   if (!body.consent) errors.consent = "Please agree to be contacted.";
@@ -80,7 +84,9 @@ export async function POST(req: NextRequest) {
     fullName,
     email,
     phone,
-    zip: (body.zip || "").trim(),
+    zip,
+    currentlyInsured: (body.currentlyInsured || "").trim().slice(0, 40),
+    qualifier: (body.qualifier || "").trim().slice(0, 80),
     bestTime: (body.bestTime || "").trim(),
     details: (body.details || "").trim().slice(0, 2000),
     source: "website_quote_form",
@@ -213,8 +219,10 @@ function formatLeadEmail(lead: Record<string, unknown>) {
     `Phone:       ${lead.phone}`,
     `Email:       ${lead.email || "(not provided)"}`,
     `ZIP:         ${lead.zip || "(not provided)"}`,
+    `Insured now: ${lead.currentlyInsured || "(not provided)"}`,
+    `Detail:      ${lead.qualifier || "(not provided)"}`,
     `Best time:   ${lead.bestTime || "(any)"}`,
-    `Details:     ${lead.details || "(none)"}`,
+    `Notes:       ${lead.details || "(none)"}`,
     "",
     `Received:    ${lead.receivedAt}`,
     `Lead ID:     ${lead.id}`,

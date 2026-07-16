@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { insuranceTypes } from "@/lib/insurance";
+import { insuranceTypes, getQualifier } from "@/lib/insurance";
 
 type Errors = Record<string, string>;
 
 const bestTimes = ["Any time", "Morning", "Afternoon", "Evening"];
+const insuredOptions = ["Yes", "No", "Not sure"];
 
 export function QuoteForm({ initialType = "" }: { initialType?: string }) {
   const router = useRouter();
@@ -21,11 +22,17 @@ export function QuoteForm({ initialType = "" }: { initialType?: string }) {
     phone: "",
     email: "",
     zip: "",
+    currentlyInsured: "",
+    qualifier: "",
     bestTime: "Any time",
     details: "",
     consent: false,
     company: "", // honeypot
   });
+
+  const qualifier = form.insuranceType
+    ? getQualifier(form.insuranceType)
+    : undefined;
 
   const totalSteps = 3;
   const progress = Math.round(((step + 1) / totalSteps) * 100);
@@ -46,6 +53,8 @@ export function QuoteForm({ initialType = "" }: { initialType?: string }) {
       if (digits.length < 10) e.phone = "Please enter a valid phone number.";
       if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
         e.email = "Please enter a valid email address.";
+      if (!/^\d{5}$/.test(form.zip.trim()))
+        e.zip = "Please enter your 5-digit ZIP so we can match local carriers.";
     }
     if (current === 2 && !form.consent) {
       e.consent = "Please check the box so a licensed agent can contact you.";
@@ -232,20 +241,29 @@ export function QuoteForm({ initialType = "" }: { initialType?: string }) {
               </div>
               <div>
                 <label htmlFor="zip" className="field-label">
-                  ZIP code{" "}
-                  <span className="font-normal text-slate-400">(optional)</span>
+                  ZIP code
                 </label>
                 <input
                   id="zip"
                   inputMode="numeric"
+                  maxLength={5}
                   className="field-input"
                   autoComplete="postal-code"
                   value={form.zip}
-                  onChange={(e) => update("zip", e.target.value)}
+                  onChange={(e) =>
+                    update("zip", e.target.value.replace(/\D/g, "").slice(0, 5))
+                  }
                   placeholder="15222"
                 />
+                {errors.zip && (
+                  <p className="mt-1 font-medium text-red-600">{errors.zip}</p>
+                )}
               </div>
             </div>
+            <p className="text-sm text-slate-500">
+              🔒 We use your ZIP to match carriers licensed in your area — it
+              helps us route you to the right local agent.
+            </p>
           </div>
         </fieldset>
       )}
@@ -261,6 +279,66 @@ export function QuoteForm({ initialType = "" }: { initialType?: string }) {
           </p>
 
           <div className="mt-6 grid gap-5">
+            {qualifier && (
+              <div>
+                <span className="field-label">
+                  {qualifier.question}{" "}
+                  <span className="font-normal text-slate-400">(optional)</span>
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {qualifier.options.map((opt) => {
+                    const selected = form.qualifier === opt;
+                    return (
+                      <button
+                        type="button"
+                        key={opt}
+                        onClick={() =>
+                          update("qualifier", selected ? "" : opt)
+                        }
+                        aria-pressed={selected}
+                        className={`rounded-xl border-2 px-4 py-2.5 font-semibold transition ${
+                          selected
+                            ? "border-brand-600 bg-brand-50 text-brand-800"
+                            : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
+                        }`}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <span className="field-label">
+                Are you currently insured?{" "}
+                <span className="font-normal text-slate-400">(optional)</span>
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {insuredOptions.map((opt) => {
+                  const selected = form.currentlyInsured === opt;
+                  return (
+                    <button
+                      type="button"
+                      key={opt}
+                      onClick={() =>
+                        update("currentlyInsured", selected ? "" : opt)
+                      }
+                      aria-pressed={selected}
+                      className={`rounded-xl border-2 px-4 py-2.5 font-semibold transition ${
+                        selected
+                          ? "border-brand-600 bg-brand-50 text-brand-800"
+                          : "border-slate-200 bg-white text-slate-700 hover:border-brand-300"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div>
               <label htmlFor="bestTime" className="field-label">
                 Best time to reach you

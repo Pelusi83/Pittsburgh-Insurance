@@ -371,3 +371,50 @@ export const insuranceTypes: InsuranceType[] = [
 export function getInsuranceType(slug: string): InsuranceType | undefined {
   return insuranceTypes.find((t) => t.slug === slug);
 }
+
+/**
+ * One quick, OPTIONAL, single-tap qualifying question per insurance line.
+ * Shown in the quote form to help route the lead to the right agent/carrier
+ * without adding friction. Kept to a single multiple-choice question so it
+ * never feels like a long form.
+ */
+export type Qualifier = { question: string; options: string[] };
+
+export const quoteQualifiers: Record<string, Qualifier> = {
+  "auto-insurance": {
+    question: "How many vehicles?",
+    options: ["1", "2", "3+"],
+  },
+  "home-insurance": {
+    question: "Property type?",
+    options: ["Single-family", "Townhome", "Condo", "Multi-unit"],
+  },
+  "life-insurance": {
+    question: "Coverage amount you have in mind?",
+    options: ["$100k", "$250k", "$500k", "$1M+", "Not sure"],
+  },
+  "health-insurance": {
+    question: "Who needs coverage?",
+    options: ["Just me", "Me + spouse", "Family"],
+  },
+  "disability-insurance": {
+    question: "Your work situation?",
+    options: ["Employed (W-2)", "Self-employed", "1099 / contractor"],
+  },
+  "business-insurance": {
+    question: "Do you have employees?",
+    options: ["Just me", "2–10", "11+"],
+  },
+  "renters-insurance": {
+    question: "Do you also have a car to bundle?",
+    options: ["Yes", "No"],
+  },
+  medicare: {
+    question: "Where are you with Medicare?",
+    options: ["Turning 65 soon", "Already enrolled", "Helping a parent"],
+  },
+};
+
+export function getQualifier(slug: string): Qualifier | undefined {
+  return quoteQualifiers[slug];
+}
