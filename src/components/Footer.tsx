@@ -71,6 +71,14 @@ export function Footer() {
             </li>
             <li>
               <Link
+                href="/guides"
+                className="text-slate-700 hover:text-brand-700"
+              >
+                Insurance Guides
+              </Link>
+            </li>
+            <li>
+              <Link
                 href="/quote"
                 className="text-slate-700 hover:text-brand-700"
               >

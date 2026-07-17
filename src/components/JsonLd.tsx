@@ -1,5 +1,6 @@
 import { siteConfig } from "@/lib/site";
 import { insuranceTypes } from "@/lib/insurance";
+import { hasReviews, averageRating, reviewCount } from "@/lib/reviews";
 
 function JsonLd({ data }: { data: Record<string, unknown> }) {
   return (
@@ -74,12 +75,18 @@ export function OrganizationJsonLd() {
       siteConfig.social.instagram,
       siteConfig.social.linkedin,
     ],
-    aggregateRating: {
-      "@type": "AggregateRating",
-      ratingValue: "4.9",
-      reviewCount: "312",
-      bestRating: "5",
-    },
+    // Only include aggregateRating when there are REAL reviews — never fabricate
+    // this (Google penalizes fake review markup).
+    ...(hasReviews
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: String(averageRating),
+            reviewCount: String(reviewCount),
+            bestRating: "5",
+          },
+        }
+      : {}),
   };
   return <JsonLd data={data} />;
 }
@@ -127,6 +134,41 @@ export function ServiceJsonLd({
       name: "Pittsburgh",
     },
     url: `${siteConfig.url}/insurance/${slug}`,
+  };
+  return <JsonLd data={data} />;
+}
+
+export function ArticleJsonLd({
+  headline,
+  description,
+  slug,
+  datePublished,
+  dateModified,
+}: {
+  headline: string;
+  description: string;
+  slug: string;
+  datePublished: string;
+  dateModified?: string;
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline,
+    description,
+    datePublished,
+    dateModified: dateModified || datePublished,
+    author: { "@type": "Organization", name: siteConfig.name },
+    publisher: {
+      "@type": "Organization",
+      name: siteConfig.name,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteConfig.url}/brand/emblem.svg`,
+      },
+    },
+    mainEntityOfPage: `${siteConfig.url}/guides/${slug}`,
+    url: `${siteConfig.url}/guides/${slug}`,
   };
   return <JsonLd data={data} />;
 }

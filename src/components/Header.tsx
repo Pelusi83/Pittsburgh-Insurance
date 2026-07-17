@@ -5,6 +5,7 @@ import { useState } from "react";
 import { siteConfig } from "@/lib/site";
 import { insuranceTypes } from "@/lib/insurance";
 import { LogoMark } from "@/components/Logo";
+import { hasReviews, averageRating, reviewCount } from "@/lib/reviews";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -16,7 +17,9 @@ export function Header() {
       <div className="bg-brand-900 text-white">
         <div className="container-px flex flex-wrap items-center justify-center gap-x-6 gap-y-1 py-1.5 text-center text-sm font-medium sm:justify-between">
           <span className="hidden sm:inline">
-            ⭐ Rated 4.9/5 by 300+ Pittsburgh families &amp; businesses
+            {hasReviews
+              ? `⭐ Rated ${averageRating}/5 by ${reviewCount} Pittsburgh clients`
+              : "🛡️ Licensed & local · A-rated carriers · Serving Greater Pittsburgh"}
           </span>
           <span>
             🔒 Licensed &amp; local · Free quotes ·{" "}
@@ -82,6 +85,12 @@ export function Header() {
           >
             Areas
           </Link>
+          <Link
+            href="/guides"
+            className="text-base font-semibold text-slate-700 hover:text-brand-700"
+          >
+            Guides
+          </Link>
           <a href={telHref} className="btn-ghost">
             📞 Call
           </a>
@@ -142,6 +151,13 @@ export function Header() {
               className="rounded-xl px-3 py-3 text-lg text-slate-800 hover:bg-brand-50"
             >
               Service Areas
+            </Link>
+            <Link
+              href="/guides"
+              onClick={() => setOpen(false)}
+              className="rounded-xl px-3 py-3 text-lg text-slate-800 hover:bg-brand-50"
+            >
+              Guides
             </Link>
             <a href={telHref} className="btn-ghost mt-2">
               📞 Call {siteConfig.phone}
