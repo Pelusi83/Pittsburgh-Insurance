@@ -23,7 +23,10 @@
   h2,
   h3,
   h4 {
-    @apply font-bold text-slate-900;
+    /* Inherit color from the surrounding section so headings read correctly on
+       both light backgrounds (dark text) and dark sections (white text). */
+    @apply font-bold;
+    color: inherit;
     text-wrap: balance;
     letter-spacing: -0.01em;
   }

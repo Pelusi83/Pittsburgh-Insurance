@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site";
 import { insuranceTypes } from "@/lib/insurance";
+import { LogoMark } from "@/components/Logo";
 
 export function Footer() {
   const telHref = `tel:${siteConfig.phone.replace(/[^0-9+]/g, "")}`;
@@ -11,11 +12,9 @@ export function Footer() {
       <div className="container-px grid gap-10 py-14 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-2xl">
-              🛡️
-            </span>
-            <span className="text-lg font-extrabold text-slate-900">
-              {siteConfig.name}
+            <LogoMark className="h-11 w-11 shrink-0" />
+            <span className="text-lg font-extrabold tracking-tight text-slate-900">
+              Pittsburgh <span className="text-brand-700">Insurance Hub</span>
             </span>
           </div>
           <p className="mt-4 text-slate-600">{siteConfig.description}</p>

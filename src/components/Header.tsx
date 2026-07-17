@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { siteConfig } from "@/lib/site";
 import { insuranceTypes } from "@/lib/insurance";
+import { LogoMark } from "@/components/Logo";
 
 export function Header() {
   const [open, setOpen] = useState(false);
@@ -32,14 +33,12 @@ export function Header() {
           className="flex items-center gap-3"
           aria-label={`${siteConfig.name} home`}
         >
-          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-2xl shadow-soft">
-            🛡️
-          </span>
+          <LogoMark className="h-11 w-11 shrink-0" />
           <span className="leading-tight">
-            <span className="block text-lg font-extrabold text-slate-900">
-              {siteConfig.name}
+            <span className="block text-lg font-extrabold tracking-tight text-slate-900">
+              Pittsburgh <span className="text-brand-700">Insurance Hub</span>
             </span>
-            <span className="block text-xs font-semibold uppercase tracking-wide text-brand-700">
+            <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               {siteConfig.tagline}
             </span>
           </span>
