@@ -30,20 +30,27 @@ export default function OpengraphImage() {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "88px",
-              height: "88px",
-              borderRadius: "22px",
-              background: "#f5b301",
+              width: "96px",
+              height: "96px",
+              borderRadius: "999px",
+              background: "#0b1a40",
             }}
           >
-            <svg width="50" height="50" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M4 12.5l5 5L20 6.5"
-                stroke="#122457"
-                strokeWidth="3.5"
+            <svg width="72" height="72" viewBox="0 0 48 48" fill="none">
+              <g
+                stroke="#f5b301"
+                strokeWidth="2.4"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-              />
+                fill="none"
+              >
+                <path d="M7.5 33h33" />
+                <path d="M17 33V12.5" />
+                <path d="M31 33V12.5" />
+                <path d="M17 12.5Q24 27 31 12.5" />
+                <path d="M17 12.5Q10 21.5 7.5 32" />
+                <path d="M31 12.5Q38 21.5 40.5 32" />
+              </g>
             </svg>
           </div>
           <div style={{ display: "flex", flexDirection: "column" }}>

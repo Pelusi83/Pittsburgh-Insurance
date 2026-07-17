@@ -11,27 +11,41 @@ export function LogoMark({
   return (
     <svg
       className={className}
-      viewBox="0 0 40 40"
+      viewBox="0 0 48 48"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       aria-label="Pittsburgh Insurance Hub logo"
     >
-      <path
-        d="M20 2.5 34.5 7.9V19c0 9.5-6.5 15.7-14.5 18.6C12 34.7 5.5 28.5 5.5 19V7.9L20 2.5Z"
-        fill="#1663f5"
-      />
-      <path
-        d="M20 6.2 30.8 10.2V19c0 7.2-4.8 12.1-10.8 14.5C14 31.1 9.2 26.2 9.2 19v-8.8L20 6.2Z"
-        fill="#0f4de1"
-      />
-      <path
-        d="M13.2 20.4 17.8 25 27 14.6"
+      {/* Navy emblem — circular so it crops cleanly for Google/social avatars */}
+      <circle cx="24" cy="24" r="24" fill="#122457" />
+      {/* Golden Pittsburgh suspension bridge */}
+      <g
         stroke="#f5b301"
-        strokeWidth="3.4"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
-      />
+        fill="none"
+      >
+        {/* deck */}
+        <path d="M7.5 33h33" />
+        {/* towers */}
+        <path d="M17 33V12.5" />
+        <path d="M31 33V12.5" />
+        {/* main span cable dipping between the towers */}
+        <path d="M17 12.5Q24 27 31 12.5" />
+        {/* side cables sweeping down to the deck ends */}
+        <path d="M17 12.5Q10 21.5 7.5 32" />
+        <path d="M31 12.5Q38 21.5 40.5 32" />
+        {/* a few suspender cables for that signature bridge look */}
+        <path d="M20.5 15.2V33" strokeWidth="1.3" />
+        <path d="M27.5 15.2V33" strokeWidth="1.3" />
+      </g>
+      {/* water */}
+      <g stroke="#59a6ff" strokeWidth="1.8" strokeLinecap="round">
+        <path d="M13 39h7" />
+        <path d="M28 39h7" />
+      </g>
     </svg>
   );
 }
