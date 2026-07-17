@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { siteConfig } from "@/lib/site";
+import { hasReviews, averageRating, reviewCount, reviews } from "@/lib/reviews";
 
 export function Hero() {
   const telHref = `tel:${siteConfig.phone.replace(/[^0-9+]/g, "")}`;
+  const featured = hasReviews ? reviews[0] : null;
 
   return (
     <section className="relative overflow-hidden bg-brand-950 text-white">
@@ -63,26 +65,52 @@ export function Hero() {
         {/* Trust card */}
         <div className="relative">
           <div className="rounded-2xl bg-white p-7 text-slate-800 shadow-soft sm:p-8">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">⭐️⭐️⭐️⭐️⭐️</span>
-              <span className="text-sm font-semibold text-slate-500">
-                4.9 / 5 · 300+ reviews
-              </span>
-            </div>
-            <blockquote className="mt-4 text-lg font-medium text-slate-700">
-              &ldquo;They found me better home <em>and</em> auto coverage and
-              saved me almost $80 a month. Felt like talking to a neighbor, not a
-              call center.&rdquo;
-            </blockquote>
-            <p className="mt-3 font-semibold text-slate-900">
-              — Denise R., Mount Lebanon
-            </p>
+            {featured ? (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl" aria-hidden>
+                    ⭐️⭐️⭐️⭐️⭐️
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500">
+                    {averageRating} / 5 · {reviewCount}{" "}
+                    {reviewCount === 1 ? "review" : "reviews"}
+                  </span>
+                </div>
+                <blockquote className="mt-4 text-lg font-medium text-slate-700">
+                  &ldquo;{featured.quote}&rdquo;
+                </blockquote>
+                <p className="mt-3 font-semibold text-slate-900">
+                  — {featured.name}, {featured.area}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-2xl">
+                    🛡️
+                  </span>
+                  <div>
+                    <p className="font-bold text-slate-900">
+                      Licensed &amp; local, on your side
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Pennsylvania insurance done honestly
+                    </p>
+                  </div>
+                </div>
+                <p className="mt-4 text-lg font-medium text-slate-700">
+                  Tell us what you need and a licensed local agent compares
+                  A-rated carriers to find your best fit — free, fast, and with
+                  zero pressure.
+                </p>
+              </>
+            )}
 
             <div className="mt-6 grid grid-cols-3 gap-3 border-t border-slate-100 pt-6 text-center">
               <div>
-                <p className="text-2xl font-extrabold text-brand-700">$647</p>
+                <p className="text-2xl font-extrabold text-brand-700">$0</p>
                 <p className="text-xs font-medium text-slate-500">
-                  Avg. yearly savings
+                  Cost to you
                 </p>
               </div>
               <div>
@@ -92,9 +120,9 @@ export function Hero() {
                 </p>
               </div>
               <div>
-                <p className="text-2xl font-extrabold text-brand-700">40+</p>
+                <p className="text-2xl font-extrabold text-brand-700">A-rated</p>
                 <p className="text-xs font-medium text-slate-500">
-                  Carriers compared
+                  Carriers only
                 </p>
               </div>
             </div>
